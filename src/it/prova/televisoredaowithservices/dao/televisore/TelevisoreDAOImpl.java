@@ -194,12 +194,12 @@ public class TelevisoreDAOImpl extends AbstractMySQLDAO implements TelevisoreDAO
 
 	@Override
 	public Televisore giveMeTheBiggestTelevisore() throws Exception {
-		// prima di tutto cerchiamo di capire se possiamo effettuare le operazioni
 		if (isNotActive())
 			throw new Exception("Connessione non attiva. Impossibile effettuare operazioni DAO.");
 		Televisore result = null;
 
-		try (PreparedStatement ps = connection.prepareStatement("select * from televisore t where t.pollici = (select max(t.pollici) from televisore);")) {
+		try (PreparedStatement ps = connection.prepareStatement(
+				"select * from televisore t where t.pollici = (select max(t.pollici) from televisore);")) {
 			try (ResultSet rs = ps.executeQuery()) {
 
 				if (rs.next()) {
@@ -210,7 +210,7 @@ public class TelevisoreDAOImpl extends AbstractMySQLDAO implements TelevisoreDAO
 					result.setDataProduzione(
 							rs.getDate("DATAPRODUZIONE") != null ? rs.getDate("DATAPRODUZIONE").toLocalDate() : null);
 					result.setId(rs.getLong("ID"));
-					
+
 				} else {
 					result = null;
 				}
@@ -225,15 +225,60 @@ public class TelevisoreDAOImpl extends AbstractMySQLDAO implements TelevisoreDAO
 	}
 
 	@Override
-	public int countTelevisoriBetweenTwoDates(LocalDate before, LocalDate after) {
-		// TODO Auto-generated method stub
-		return 0;
+	public int countTelevisoriBetweenTwoDates(LocalDate before, LocalDate after) throws Exception {
+		// prima di tutto cerchiamo di capire se possiamo effettuare le operazioni
+		if (isNotActive())
+			throw new Exception("Connessione non attiva. Impossibile effettuare operazioni DAO.");
+		if (before == null || after == null) {
+			throw new Exception("Valore input non ammesso");
+		}
+		int result = 0;
+
+		try (PreparedStatement ps = connection
+				.prepareStatement("select count(*) from televisore t where dataproduzione between ? and ?;")) {
+			ps.setDate(1, java.sql.Date.valueOf(before));
+			ps.setDate(2, java.sql.Date.valueOf(after));
+			try (ResultSet rs = ps.executeQuery()) {
+
+				if (rs.next()) {
+					result = rs.getInt("count(*)");
+				} else {
+					result = 0;
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
+			}
+
+		}
+		return result;
 	}
 
 	@Override
-	public List<String> marcheTelevisoriLastSixMonths() {
-		// TODO Auto-generated method stub
-		return null;
+	public List<String> marcheTelevisoriLastSixMonths() throws Exception {
+		// prima di tutto cerchiamo di capire se possiamo effettuare le operazioni
+		if (isNotActive())
+			throw new Exception("Connessione non attiva. Impossibile effettuare operazioni DAO.");
+		List<String> result = new ArrayList<>();
+		try (PreparedStatement ps = connection
+				.prepareStatement("select distinct (marca) from televisore where dataproduzione > ?;")) {
+			ps.setDate(1, java.sql.Date.valueOf(LocalDate.now().minusMonths(6)));
+			try (ResultSet rs = ps.executeQuery()) {
+
+				while (rs.next()) {
+					String marcaTemp ="";
+					marcaTemp = rs.getString("marca");
+					result.add(marcaTemp);
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
+			}
+
+		}
+		return result;
 	}
 
 }
